@@ -1,10 +1,38 @@
 #pragma once;
 
-class huffmanAlgorithm
+#include <vector>
+#include "tree.h"
+
+class huffmanAlg
 {
+    std::vector<treeTop*> tree_tops;
+
     public:
 
-    huffmanAlgorithm();
+    /**
+     * @brief
+     * Конструктор класса
+     * 
+     * @param probs
+     * вектор с ансамблем из вероятностей
+     */
+    huffmanAlg( std::vector< float >& probs );
 
-    ~huffmanAlgorithm();
+    /**
+     * @brief
+     * Строит дерево из ансамбля
+     */
+    void get_tree();
+    
+    /**
+     * @brief 
+     * Сортировка вершин по их значениям
+     */
+    void tree_tops_sort();
+
+    /**
+     * @brief
+     * Деструктор класса
+     */
+    ~huffmanAlg();
 };

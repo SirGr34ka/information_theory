@@ -18,8 +18,34 @@ class treeTop
      */
     treeTop( const float _data );
 
+    /**
+     * @brief
+     * Гетер данных из вершины
+     * 
+     * @return
+     * Возвращает данные вершины
+     */
+    float get_data();
+
+    /**
+     * @brief
+     * Пушит вправо от вершины
+     * 
+     * @param top
+     * Вершина, которую нужно запушить
+     */
     void push_right( treeTop* top );
+
+    /**
+     * @brief
+     * Пушит влево от вершины
+     * 
+     * @param top
+     * Вершина, которую нужно запушить
+     */
     void push_left( treeTop* top );
+
+    void preorder_output();
 
     /**
      * @brief
