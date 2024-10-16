@@ -10,7 +10,7 @@ huffmanAlg::huffmanAlg( std::vector<float>& probs )
     }
 }
 
-void huffmanAlg::get_tree()
+treeTop* huffmanAlg::get_tree()
 {
     treeTop* top;
     size_t size;
@@ -30,7 +30,7 @@ void huffmanAlg::get_tree()
         tree_tops_sort();
     }
 
-    return;
+    return tree_tops[0];
 }
 
 void huffmanAlg::tree_tops_sort()
@@ -39,13 +39,13 @@ void huffmanAlg::tree_tops_sort()
 
     for ( size_t i = 0 ; i < ( tree_tops.size() - 1 ) ; ++i )
     {
-        for ( size_t j = 1 ; j < tree_tops.size() ; ++j )
+        for ( size_t j = i ; j < tree_tops.size() ; ++j )
         {
-            if ( tree_tops[i]->get_data() < tree_tops[j]->get_data() )
+            if ( tree_tops[j]->get_data() < tree_tops[ j + 1 ]->get_data() )
             {
-                temp = tree_tops[i];
-                tree_tops[i] = tree_tops[j];
-                tree_tops[j] = temp;
+                temp = tree_tops[j];
+                tree_tops[j] = tree_tops[ j + 1 ];
+                tree_tops[ j + 1 ] = temp;
             }
         }
     }

@@ -45,6 +45,10 @@ class treeTop
      */
     void push_left( treeTop* top );
 
+    /**
+     * @brief
+     * Префиксный обход дерева
+     */
     void preorder_output();
 
     /**

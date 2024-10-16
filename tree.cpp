@@ -31,14 +31,14 @@ void treeTop::push_left( treeTop* top )
 
 void treeTop::preorder_output()
 {
-    if (tree == NULL)
+    if (this == NULL)
     {
         return;
     }
 
-    std::cout << tree->getData() << " ";
-    preorder_output(tree->left);
-    preorder_output(tree->right);
+    std::cout << this->get_data() << " ";
+    left->preorder_output();
+    right->preorder_output();
 
     return;
 }

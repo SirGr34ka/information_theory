@@ -1,6 +1,7 @@
 #pragma once;
 
 #include <vector>
+#include <iostream>
 #include "tree.h"
 
 class huffmanAlg
@@ -22,7 +23,7 @@ class huffmanAlg
      * @brief
      * Строит дерево из ансамбля
      */
-    void get_tree();
+    treeTop* get_tree();
     
     /**
      * @brief 
