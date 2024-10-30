@@ -1,8 +1,9 @@
 #include "huffman.h"
 
-huffmanAlg::huffmanAlg( std::vector<float>& probs )
+huffmanAlg::huffmanAlg( std::vector<float>& _probs )
 {
-    tree_tops.resize( probs.size() );
+    probs = _probs;
+    tree_tops.resize( _probs.size() );
     
     for ( size_t i = 0 ; i < probs.size() ; ++i )
     {
@@ -27,30 +28,10 @@ treeTop* huffmanAlg::get_tree()
         tree_tops.pop_back();
         tree_tops.push_back( top );
 
-        tree_tops_sort();
+        std::sort( tree_tops.begin() , tree_tops.end() , []( treeTop* a , treeTop* b ){ return a->get_data() < b->get_data(); });
     }
 
     return tree_tops[0];
-}
-
-void huffmanAlg::tree_tops_sort()
-{
-    treeTop* temp;
-
-    for ( size_t i = 0 ; i < ( tree_tops.size() - 1 ) ; ++i )
-    {
-        for ( size_t j = i ; j < tree_tops.size() ; ++j )
-        {
-            if ( tree_tops[j]->get_data() < tree_tops[ j + 1 ]->get_data() )
-            {
-                temp = tree_tops[j];
-                tree_tops[j] = tree_tops[ j + 1 ];
-                tree_tops[ j + 1 ] = temp;
-            }
-        }
-    }
-
-    return;
 }
 
 huffmanAlg::~huffmanAlg()

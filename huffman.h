@@ -1,12 +1,17 @@
 #pragma once;
 
 #include <vector>
+#include <string>
 #include <iostream>
+#include <map>
+#include <algorithm>
+
 #include "tree.h"
 
 class huffmanAlg
 {
     std::vector<treeTop*> tree_tops;
+    std::vector<float> probs;
 
     public:
 
@@ -24,12 +29,8 @@ class huffmanAlg
      * Строит дерево из ансамбля
      */
     treeTop* get_tree();
-    
-    /**
-     * @brief 
-     * Сортировка вершин по их значениям
-     */
-    void tree_tops_sort();
+
+    std::map< float , std::string > get_codes();
 
     /**
      * @brief
