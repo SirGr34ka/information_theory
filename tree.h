@@ -4,10 +4,10 @@ class treeTop
 {
     float data;
 
+    public:
+
     treeTop* right;
     treeTop* left;
-
-    public:
 
     /**
      * @brief

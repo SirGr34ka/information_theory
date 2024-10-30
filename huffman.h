@@ -11,7 +11,20 @@
 class huffmanAlg
 {
     std::vector<treeTop*> tree_tops;
-    std::vector<float> probs;
+    std::map< float , std::string > codes;
+    std::string code;
+
+    /**
+     * @brief
+     * Строит коды для ансамбля вероятностей
+     * 
+     * @param top
+     * вершина дерева
+     * 
+     * @param code
+     * начальное значение кода
+     */
+    void get_codes( treeTop* top , std::string code );
 
     public:
 
@@ -26,11 +39,11 @@ class huffmanAlg
 
     /**
      * @brief
-     * Строит дерево из ансамбля
+     * Строит дерево из ансамбля вероятностей и выводит его
      */
-    treeTop* get_tree();
+    void output_tree();
 
-    std::map< float , std::string > get_codes();
+    void output_codes();
 
     /**
      * @brief
