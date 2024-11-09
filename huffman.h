@@ -1,17 +1,18 @@
-#pragma once;
+#pragma once
 
 #include <vector>
 #include <string>
 #include <iostream>
 #include <map>
 #include <algorithm>
+#include <tuple>
 
 #include "tree.h"
 
 class huffmanAlg
 {
     std::vector<treeTop*> tree_tops;
-    std::map< float , std::string > codes;
+    std::multimap< float , std::string > codes;
     std::string code;
 
     /**
@@ -43,7 +44,13 @@ class huffmanAlg
      */
     void output_tree();
 
+    /**
+     * @brief
+     * Строит коды для ансамбля вероятностей и выводит их
+     */
     void output_codes();
+
+    float printEntropy();
 
     /**
      * @brief

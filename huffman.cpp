@@ -50,10 +50,28 @@ void huffmanAlg::output_tree()
 
 void huffmanAlg::get_codes( treeTop* top , std::string code )
 {
-    // ЕСЛИ БУДУТ ОДИНАКОВЫЕ ВЕРОЯТНОСТИ ТО БУДЕТ ГАБЕЛА
-    if ( codes.count( top->get_data() ) && top->left == NULL && top->right == NULL )
+    float prob = top->get_data();
+
+    if ( codes.count( prob ) && top->left == NULL && top->right == NULL )
     {
-        codes[ top->get_data() ] = code;
+        // Если есть одинаковые вероятности в ансамбле
+        if( codes.count( prob ) > 1 )
+        {
+            auto iters = codes.equal_range( prob );
+
+            for ( auto pair = std::get<0>(iters) ; pair != std::get<1>(iters) ; ++pair )
+            {
+                if( std::get<1>(*pair) == "" )
+                {
+                    std::get<1>(*pair) = code;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            std::get<1>(*codes.find(prob)) = code;
+        }
 
         return;
     }
@@ -79,7 +97,7 @@ void huffmanAlg::output_codes()
 
     for ( auto& [ key , value ] : codes )
     {
-        std::cout << "z" << i++ << ": " << value << " ";
+        std::cout << "z" << ++i << ": " << value << " ";
     }
 
     return;

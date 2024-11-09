@@ -8,7 +8,7 @@ int main(int, char**)
     // Вывод вероятностей
     std::vector<float> probs { 0.26 , 0.23 , 0.16 , 0.11 , 0.09 , 0.08 , 0.05 , 0.02 };
 
-    for ( size_t i = 0 ; i < probs.size() ; ++i )
+    for ( size_t i = 1 ; i < probs.size() ; ++i )
     {
         std::cout << "z" << i << ": " << probs[i] << " ";
     }
@@ -21,7 +21,6 @@ int main(int, char**)
     tree.output_tree();
 
     // Вывод кодов
-    tree.get_codes( top , "" );
     tree.output_codes();
 
     std::cout << std::endl;
