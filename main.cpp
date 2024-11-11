@@ -1,12 +1,13 @@
-#include <vector>
 #include <iostream>
-#include "tree.h"
+
+#include <vector>
+
 #include "huffman.h"
 
 int main(int, char**)
 {
     // Вывод вероятностей
-    std::vector<float> probs { 0.26 , 0.23 , 0.16 , 0.11 , 0.09 , 0.08 , 0.05 , 0.02 };
+    std::vector<float> probs { 0.26F , 0.23F , 0.16F , 0.11F , 0.09F , 0.08F , 0.05F , 0.02F };
 
     for ( size_t i = 1 ; i < probs.size() ; ++i )
     {
@@ -23,7 +24,10 @@ int main(int, char**)
     // Вывод кодов
     tree.output_codes();
 
-    std::cout << std::endl;
+    // Вывод энтропии, средней длины слова и избыточность
+    tree.output_entropy();
+    tree.output_average_length();
+    tree.output_redundancy();
 
     return 0;
 }

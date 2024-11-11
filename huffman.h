@@ -1,11 +1,14 @@
 #pragma once
 
+#include <iostream>
+
 #include <vector>
 #include <string>
-#include <iostream>
 #include <map>
-#include <algorithm>
 #include <tuple>
+
+#include <algorithm>
+#include <cmath>
 
 #include "tree.h"
 
@@ -13,7 +16,10 @@ class huffmanAlg
 {
     std::vector<treeTop*> tree_tops;
     std::multimap< float , std::string > codes;
-    std::string code;
+
+    float entropy;
+    float average_length;
+    float redundancy;
 
     /**
      * @brief
@@ -50,7 +56,23 @@ class huffmanAlg
      */
     void output_codes();
 
-    float printEntropy();
+    /**
+     * @brief
+     * Вывод энтропии
+     */
+    void output_entropy();
+
+    /**
+     * @brief
+     * Вывод средней длины слова
+     */
+    void output_average_length();
+
+    /**
+     * @brief
+     * Вывод избыточности
+     */
+    void output_redundancy();
 
     /**
      * @brief

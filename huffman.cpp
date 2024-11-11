@@ -2,6 +2,10 @@
 
 huffmanAlg::huffmanAlg( std::vector<float>& probs )
 {
+    entropy = 0;
+    average_length = 0;
+    redundancy = 0;
+
     tree_tops.resize( probs.size() );
     
     for ( size_t i = 0 ; i < probs.size() ; ++i )
@@ -13,8 +17,6 @@ huffmanAlg::huffmanAlg( std::vector<float>& probs )
     {
         codes.insert( std::pair< float , std::string > { prob , {} } );
     }
-
-    code = "";
 }
 
 void huffmanAlg::output_tree()
@@ -95,12 +97,43 @@ void huffmanAlg::output_codes()
 
     size_t i = 0;
 
-    for ( auto& [ key , value ] : codes )
+    for ( auto& pair : codes )
     {
-        std::cout << "z" << ++i << ": " << value << " ";
+        std::cout << "z" << ++i << ": " << pair.second << " ";
     }
 
+    std::cout << std::endl;
+
     return;
+}
+
+void huffmanAlg::output_entropy()
+{
+    for ( auto& pair : codes )
+    {
+        entropy += pair.first * log2f( pair.first );
+    }
+
+    entropy = -entropy;
+
+    std::cout << "Entropy: " << entropy << std::endl;
+}
+
+void huffmanAlg::output_average_length()
+{
+    for ( auto& pair : codes )
+    {
+        average_length += pair.first * pair.second.size();
+    }
+
+    std::cout << "Average length: " << average_length << std::endl;
+}
+
+void huffmanAlg::output_redundancy()
+{
+    redundancy = 1 + ( (entropy) / ( log2f( ( float )1 / codes.size() ) ) );
+
+    std::cout << "Readundancy: " << redundancy << std::endl;
 }
 
 huffmanAlg::~huffmanAlg()
