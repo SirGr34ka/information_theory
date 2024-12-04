@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "MSVC",
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "displayName": "MSVC",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
