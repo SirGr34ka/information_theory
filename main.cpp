@@ -3,10 +3,14 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <tuple>
 
 #include <algorithm>
 #include <cmath>
+
+template < typename T >
+int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character );
 
 // Класс ноды дерева
 class treeTop
@@ -81,7 +85,7 @@ class treeTop
         }
     }
 };
-
+//---------------------------------------------------------------------------------------------------------
 class huffmanAlg
 {
     std::vector<treeTop*> tree_tops;
@@ -242,31 +246,181 @@ class huffmanAlg
         delete tree_tops[0];
     }
 };
-
-int main(int, char**)
+//---------------------------------------------------------------------------------------------------------
+class ShannonFanoAlg
 {
-    // Вывод вероятностей
-    std::vector<float> probs { 0.21F , 0.19F , 0.15F , 0.13F , 0.12F , 0.09F , 0.06F , 0.05F };
+    const std::vector< std::pair< std::string , float > >* charset_ptr;
+    std::vector< std::pair< std::string , std::string > > codes;
 
-    for ( size_t i = 1 ; i < probs.size() ; ++i )
+    float entropy;
+    float average_length;
+    float redundancy;
+
+    // Заполнение ансамбля буквами и их кодами
+    void get_codes(
+        std::vector< std::pair< std::string , float > >::const_iterator begin, // Итератор на начало блока
+        std::vector< std::pair< std::string , float > >::const_iterator end,  // Итератор на конец блока
+        std::string code )
     {
-        std::cout << "z" << i << ": " << probs[i] << " ";
+        // Если остался один элемент
+        if ( begin + 1 == end )
+        {
+            // Добавление кода в формате: { буква , код }
+            codes.push_back( { begin->first , code } );
+
+            return;
+        }
+
+        auto iter = begin + 1; // Итератор на последующий после начала блока элемент
+
+        float differential;
+        float min_differential;
+
+        // Поиск элемента при котором, разница разбиения блока на подблоки будет минимальной
+        for ( ; iter != end ; ++iter )
+        {
+            // Вычисление разницы между блоками
+            differential = fabs( sum( begin , iter ) - sum( iter , end ) );
+
+            // Если минимальная разница меньше найденной, то цикл нужно прекратить
+            if ( ( min_differential < differential ) && ( iter != begin + 1 ) )
+            {
+                break;
+            }
+
+            min_differential = differential;
+        }
+
+        get_codes( begin , iter - 1 , code + "1" ); // Рекурсивный вызов этой же функции для левого подблока
+        get_codes( iter - 1 , end , code + "0" ); // Рекурсивный вызов этой же функции для правого подблока
+
+        return;
     }
 
-    std::cout << std::endl;
+    // Сумма вероятностей ансамбля определенного диапазона (нужна для функции get_codes)
+    float sum(
+        std::vector< std::pair< std::string , float > >::const_iterator begin, // Итератор на начало диапазона
+        std::vector< std::pair< std::string , float > >::const_iterator end ) // Итератор на конец диапазона
+    {
+        float result = 0;
 
-    // Вывод префиксного обхода дерева
-    huffmanAlg tree( probs );
+        while ( begin != end )
+        {
+            // Прибавление вероятности буквы
+            result += begin->second;
 
-    tree.output_tree();
+            ++begin;
+        }
 
-    // Вывод кодов
-    tree.output_codes();
+        return result;
+    }
 
-    // Вывод энтропии, средней длины слова и избыточность
-    tree.output_entropy();
-    tree.output_average_length();
-    tree.output_redundancy();
+    // Сортировка букв в codes по расположению букв в charset
+    void sort_codes_by_charset()
+    {
+        std::pair< std::string , std::string > temp;
+        int index;
+
+        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
+        {
+            // Поиск буквы в codes ( < Тип шаблона >, соответствено float для charset и std::string для codes  )
+            index = find_character< std::string >( codes , (*charset_ptr)[i].first );
+
+            // Если буква не найдена
+            if ( index < 0 )
+            {
+                throw "Not found!";
+            }
+
+            // Если буква в codes не на своем месте
+            if ( i != (size_t)index )
+            {
+                temp = codes[i];
+                codes[i] = codes[index];
+                codes[index] = temp;
+            }
+        }
+
+        return;
+    }
+
+    public:
+
+    // Конструктор класса, принимающий указатель на ансамбль букв и их вероятностей
+    ShannonFanoAlg( const std::vector< std::pair< std::string , float > >* charset_ptr_ )
+    {
+        entropy = 0;
+        average_length = 0;
+        redundancy = 0;
+
+        // Сохранение указателя на ансамбль
+        charset_ptr = charset_ptr_;
+
+        // Расширение памяти под количество букв из ансамбля
+        codes.reserve( charset_ptr_->size() );
+    }
+
+    // Вывод ансамбля букв и их кодов
+    void output_codes()
+    {
+        auto begin = charset_ptr->cbegin();
+        auto end = charset_ptr->cend();
+
+        // Нахождение кодов
+        get_codes( begin , end , "" );
+
+        // Сортировка codes
+        sort_codes_by_charset();
+        
+        // Вывод кодов
+        for ( auto iter = codes.cbegin() ; iter != codes.cend() ; ++iter )
+        {
+            std::cout << iter->first << ": " << iter->second << std::endl;
+        }
+
+        return;
+    }
+};
+
+// Поиск буквы в charset или codes
+template < typename T >
+int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character )
+{
+    for ( size_t i = 0 ; i < charset.size() ; ++i )
+    {
+        // Если буква равна искомой
+        if ( charset[i].first == character )
+        {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+//---------------------------------------------------------------------------------------------------------
+int main(int, char**)
+{
+    const std::vector< std::pair< std::string , float > > charset {
+        { "z1" , 0.21F },
+        { "z2" , 0.19F },
+        { "z3" , 0.15F },
+        { "z4" , 0.13F },
+        { "z5" , 0.12F },
+        { "z6" , 0.09F },
+        { "z7" , 0.06F },
+        { "z8" , 0.05F }
+    };
+
+    // Вывод ансамбля букв и их вероятностей
+    for ( auto iter = charset.cbegin() ; iter != charset.cend() ; ++iter )
+    {
+        std::cout << iter->first << ": " << iter->second << std::endl;
+    }
+
+    ShannonFanoAlg alg ( &charset );
+
+    alg.output_codes();
 
     return 0;
 }
