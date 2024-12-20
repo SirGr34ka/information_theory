@@ -2,28 +2,31 @@
 
 #include <vector>
 #include <string>
-#include <map>
-#include <unordered_map>
 #include <tuple>
 
 #include <algorithm>
 #include <cmath>
 
+// Шаблоны функции
 template < typename T >
 int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character );
 
+void sort_codes_by_charset( const std::vector< std::pair< std::string , float > >* charset_ptr,
+                            std::vector< std::pair< std::string , std::string > >& codes );
+//-----------------------------------------------------------------------------------------------------------------
 // Класс ноды дерева
-class treeTop
+template < class T >
+class TreeTop
 {
-    float data;
+    T data;
 
     public:
 
-    treeTop* right;
-    treeTop* left;
+    TreeTop* right;
+    TreeTop* left;
 
     // Конструктор класса
-    treeTop( const float _data )
+    TreeTop( const T& _data )
     {
         data = _data;
 
@@ -32,13 +35,13 @@ class treeTop
     }
 
     // Гетер данных из вершины
-    float get_data()
+    T& get_data()
     {
         return data;
     }
 
     // Пушит вправо от вершины
-    void push_right( treeTop* top )
+    void push_right( TreeTop* top )
     {
         right = top;
 
@@ -46,7 +49,7 @@ class treeTop
     }
 
     // Пушит влево от вершины
-    void push_left( treeTop* top )
+    void push_left( TreeTop* top )
     {
         left = top;
 
@@ -54,6 +57,7 @@ class treeTop
     }
 
     // Префиксный обход дерева
+    /*
     void preorder_output()
     {
         std::cout << this->get_data() << " ";
@@ -70,9 +74,10 @@ class treeTop
 
         return;
     }
+    */
 
     // Деструктор класса
-    ~treeTop()
+    ~TreeTop()
     {
         if ( right != NULL )
         {
@@ -86,92 +91,33 @@ class treeTop
     }
 };
 //---------------------------------------------------------------------------------------------------------
-class huffmanAlg
+class HuffmanAlg
 {
-    std::vector<treeTop*> tree_tops;
-    std::multimap< float , std::string > codes;
+    const std::vector< std::pair< std::string , float > >* charset_ptr;
+    std::vector< std::pair< std::string , std::string > > codes;
+
+    // Вектор указателей на вершину дерева, которая хранит данные вида: std::pair< буква , вероятность >
+    std::vector<TreeTop< std::pair< std::string , float > >* > tree_tops;
 
     float entropy;
     float average_length;
     float redundancy;
 
-    // Строит коды для ансамбля вероятностей
-    void get_codes( treeTop* top , std::string code )
+    // Строит дерево из ансамбля букв и их вероятностей
+    void build_tree()
     {
-        float prob = top->get_data();
-
-        if ( codes.count( prob ) && top->left == NULL && top->right == NULL )
-        {
-            // Если есть одинаковые вероятности в ансамбле
-            if( codes.count( prob ) > 1 )
-            {
-                auto iters = codes.equal_range( prob );
-
-                for ( auto pair = std::get<0>(iters) ; pair != std::get<1>(iters) ; ++pair )
-                {
-                    if( std::get<1>(*pair) == "" )
-                    {
-                        std::get<1>(*pair) = code;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                std::get<1>(*codes.find(prob)) = code;
-            }
-
-            return;
-        }
-
-        if ( top->left != NULL )
-        {
-            get_codes( top->left , code + "1" );
-        }
-
-        if ( top->right != NULL )
-        {
-            get_codes( top->right , code + "0" );
-        }
-
-        return;
-    }
-
-    public:
-
-    // Конструктор класса
-    huffmanAlg( std::vector< float >& probs )
-    {
-        entropy = 0;
-        average_length = 0;
-        redundancy = 0;
-
-        tree_tops.resize( probs.size() );
-        
-        for ( size_t i = 0 ; i < probs.size() ; ++i )
-        {
-            tree_tops[i] = new treeTop( probs[i] );
-        }
-
-        for ( auto& prob: probs )
-        {
-            codes.insert( std::pair< float , std::string > { prob , {} } );
-        }
-    }
-
-    // Строит дерево из ансамбля вероятностей и выводит его
-    void output_tree()
-    {
-        // Построение дерева вероятностей
-        treeTop* top;
+        TreeTop< std::pair< std::string , float > >* top;
         size_t size;
         
+        // Пока не получим корень дерева
         while ( tree_tops.size() != 1 )
         {
             size = tree_tops.size();
 
             // Объединение последних двух вероятностей в одну
-            top = new treeTop( tree_tops[ size - 1 ]->get_data() + tree_tops[ size - 2 ]->get_data() );
+            top = new TreeTop< std::pair< std::string , float > >( { "",        // Пустая буква
+                                tree_tops[ size - 1 ]->get_data().second +      // Вероятность последней вершины в tree_tops
+                                tree_tops[ size - 2 ]->get_data().second } );   // Вероятность предпоследней вершины в tree_tops
             top->push_right( tree_tops[ size - 1 ] );
             top->push_left( tree_tops[ size - 2 ] );
 
@@ -179,57 +125,105 @@ class huffmanAlg
             tree_tops.pop_back();
             tree_tops.push_back( top );
 
-            // Сортировка по вероятностям после объединения
-            std::sort( tree_tops.begin() , tree_tops.end() , []( treeTop* a , treeTop* b ){ return a->get_data() > b->get_data(); });
+            // Сортировка с помощью метода std::sort по вероятностям после объединения
+            std::sort(  tree_tops.begin(),                                      // Итератор на начало tree_tops
+                        tree_tops.end(),                                        // Итератор на конец tree_tops
+                        []( TreeTop< std::pair< std::string , float > >* a,     // Лямбда функция сравнения двух вершин по их вероятностям
+                            TreeTop< std::pair< std::string , float > >* b )
+            { return a->get_data().second > b->get_data().second; });           // Возвращаем результат сравнения вторых элементов пар, то есть вероятностей
         }
 
         // Вывод дерева вероятностей
+        /*
         tree_tops[0]->preorder_output();
 
         std::cout << std::endl;
+        */
 
         return;
+    }
+
+    // Строит коды для ансамбля вероятностей
+    void get_codes( TreeTop< std::pair< std::string , float > >* top , std::string code )
+    {
+        // Если буква в вершине не равна пустой строке
+        if ( top->get_data().first != "" )
+        {
+            // Добавление кода в формате: { буква , код }
+            codes.push_back( { top->get_data().first , code } );
+
+            return;
+        }
+
+        get_codes( top->left , code + "1" );
+        get_codes( top->right , code + "0" );
+
+        return;
+    }
+
+    public:
+
+    // Конструктор класса, принимающий указатель на ансамбль букв и их вероятностей
+    HuffmanAlg( const std::vector< std::pair< std::string , float > >* charset_ptr_ )
+    {
+        entropy = 0;
+        average_length = 0;
+        redundancy = 0;
+
+        charset_ptr = charset_ptr_;
+
+        tree_tops.reserve( charset_ptr_->size() );
+        
+        for ( size_t i = 0 ; i < charset_ptr_->size() ; ++i )
+        {
+            tree_tops.push_back( new TreeTop< std::pair< std::string , float > >( (*charset_ptr_)[i] ));
+        }
+
+        codes.reserve( charset_ptr_->size() );
     }
 
     // Строит коды для ансамбля вероятностей и выводит их
     void output_codes()
     {
+        // Находим корень дерева
+        build_tree();
+
+        // Нахождение кодов
         get_codes( tree_tops[0] , "" );
 
-        size_t i = 0;
-
-        for ( auto& pair : codes )
+        // Сортировка codes
+        sort_codes_by_charset( charset_ptr , codes );
+        
+        // Вывод кодов
+        for ( auto iter = codes.cbegin() ; iter != codes.cend() ; ++iter )
         {
-            std::cout << "z" << ++i << ": " << pair.second << " ";
-        }
-
-        std::cout << std::endl;
-
-        return;
+            std::cout << iter->first << ": " << iter->second << std::endl;
+        };
     }
 
     // Вывод энтропии
+    // Вывод энтропии
     void output_entropy()
     {
-        for ( auto& pair : codes )
+        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
         {
-            entropy += pair.first * log2f( pair.first );
+            entropy += (*charset_ptr)[i].second * log2f( (*charset_ptr)[i].second );
         }
 
         entropy = -entropy;
 
-        std::cout << "Entropy: " << entropy << std::endl;
+        std::cout << "Huffman algorithm entropy: " << entropy << std::endl;
     }
 
     // Вывод средней длины слова
     void output_average_length()
     {
-        for ( auto& pair : codes )
+        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
         {
-            average_length += pair.first * pair.second.size();
+            average_length += (*charset_ptr)[i].second * codes[i].second.size();
         }
 
-        std::cout << "Average length: " << average_length << std::endl;
+        std::cout << "Huffman algorithm average length: " << average_length << std::endl;
     }
 
     // Вывод избыточности
@@ -237,11 +231,11 @@ class huffmanAlg
     {
         redundancy = 1 + ( (entropy) / ( log2f( ( float )1 / codes.size() ) ) );
 
-        std::cout << "Readundancy: " << redundancy << std::endl;
+        std::cout << "Huffman algorithm readundancy: " << redundancy << std::endl;
     }
 
     // Деструктор класса
-    ~huffmanAlg()
+    ~HuffmanAlg()
     {
         delete tree_tops[0];
     }
@@ -315,35 +309,6 @@ class ShannonFanoAlg
         return result;
     }
 
-    // Сортировка букв в codes по расположению букв в charset
-    void sort_codes_by_charset()
-    {
-        std::pair< std::string , std::string > temp;
-        int index;
-
-        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
-        {
-            // Поиск буквы в codes ( < Тип шаблона >, соответствено float для charset и std::string для codes  )
-            index = find_character< std::string >( codes , (*charset_ptr)[i].first );
-
-            // Если буква не найдена
-            if ( index < 0 )
-            {
-                throw "Not found!";
-            }
-
-            // Если буква в codes не на своем месте
-            if ( i != (size_t)index )
-            {
-                temp = codes[i];
-                codes[i] = codes[index];
-                codes[index] = temp;
-            }
-        }
-
-        return;
-    }
-
     public:
 
     // Конструктор класса, принимающий указатель на ансамбль букв и их вероятностей
@@ -370,7 +335,7 @@ class ShannonFanoAlg
         get_codes( begin , end , "" );
 
         // Сортировка codes
-        sort_codes_by_charset();
+        sort_codes_by_charset( charset_ptr , codes );
         
         // Вывод кодов
         for ( auto iter = codes.cbegin() ; iter != codes.cend() ; ++iter )
@@ -379,6 +344,38 @@ class ShannonFanoAlg
         }
 
         return;
+    }
+
+    // Вывод энтропии
+    void output_entropy()
+    {
+        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
+        {
+            entropy += (*charset_ptr)[i].second * log2f( (*charset_ptr)[i].second );
+        }
+
+        entropy = -entropy;
+
+        std::cout << "Shannon-Fano algorithm entropy: " << entropy << std::endl;
+    }
+
+    // Вывод средней длины слова
+    void output_average_length()
+    {
+        for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
+        {
+            average_length += (*charset_ptr)[i].second * codes[i].second.size();
+        }
+
+        std::cout << "Shannon-Fano algorithm average length: " << average_length << std::endl;
+    }
+
+    // Вывод избыточности
+    void output_redundancy()
+    {
+        redundancy = 1 + ( (entropy) / ( log2f( ( float )1 / codes.size() ) ) );
+
+        std::cout << "Shannon-Fano algorithm readundancy: " << redundancy << std::endl;
     }
 };
 
@@ -398,18 +395,48 @@ int find_character( const std::vector< std::pair< std::string , T > >& charset ,
     return -1;
 }
 
+// Сортировка букв в codes по расположению букв в charset
+void sort_codes_by_charset( const std::vector< std::pair< std::string , float > >* charset_ptr, // Указатель на charset
+                            std::vector< std::pair< std::string , std::string > >& codes )      // Ссылка на codes
+{
+    std::pair< std::string , std::string > temp;
+    int index;
+
+    for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
+    {
+        // Поиск буквы в codes ( < Тип шаблона >, соответствено float для charset и std::string для codes  )
+        index = find_character< std::string >( codes , (*charset_ptr)[i].first );
+
+        // Если буква не найдена
+        if ( index < 0 )
+        {
+            throw "Not found!";
+        }
+
+        // Если буква в codes не на своем месте
+        if ( i != (size_t)index )
+        {
+            temp = codes[i];
+            codes[i] = codes[index];
+            codes[index] = temp;
+        }
+    }
+
+    return;
+}
+
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
     const std::vector< std::pair< std::string , float > > charset {
-        { "z1" , 0.21F },
-        { "z2" , 0.19F },
-        { "z3" , 0.15F },
-        { "z4" , 0.13F },
-        { "z5" , 0.12F },
-        { "z6" , 0.09F },
-        { "z7" , 0.06F },
-        { "z8" , 0.05F }
+        { "z1" , 0.26F },
+        { "z2" , 0.23F },
+        { "z3" , 0.16F },
+        { "z4" , 0.11F },
+        { "z5" , 0.09F },
+        { "z6" , 0.08F },
+        { "z7" , 0.05F },
+        { "z8" , 0.02F }
     };
 
     // Вывод ансамбля букв и их вероятностей
@@ -418,9 +445,23 @@ int main(int, char**)
         std::cout << iter->first << ": " << iter->second << std::endl;
     }
 
-    ShannonFanoAlg alg ( &charset );
+    HuffmanAlg huffman_alg ( &charset );
+    ShannonFanoAlg shannon_fano_alg ( &charset );
 
-    alg.output_codes();
+    std::cout << "Huffman codes:" << std::endl;
+
+    huffman_alg.output_codes();
+
+    std::cout << "Shannon-Fano codes:" << std::endl;
+
+    shannon_fano_alg.output_codes();
+
+    huffman_alg.output_entropy();
+    shannon_fano_alg.output_entropy();
+    huffman_alg.output_average_length();
+    shannon_fano_alg.output_average_length();
+    huffman_alg.output_redundancy();
+    shannon_fano_alg.output_redundancy();
 
     return 0;
 }
