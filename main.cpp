@@ -267,8 +267,8 @@ class ShannonFanoAlg
 
         auto iter = begin + 1; // Итератор на последующий после начала блока элемент
 
-        float differential;
-        float min_differential;
+        float differential{};
+        float min_differential{};
 
         // Поиск элемента при котором, разница разбиения блока на подблоки будет минимальной
         for ( ; iter != end ; ++iter )
@@ -425,28 +425,89 @@ void sort_codes_by_charset( const std::vector< std::pair< std::string , float > 
     return;
 }
 
+void generate_combinations( const std::vector< std::pair< std::string , float > >& charset , const size_t COMB_LENGTH,
+                     std::vector< std::pair< std::string , float > >& combset )
+{
+    size_t n = charset.size();  // Количество символов
+    std::vector< size_t > indices( COMB_LENGTH , 0 );  // Индексы для генерации комбинаций
+
+    do {
+        std::string comb = "";  // Блок символов
+        float prob = 1.0F;  // Вероятность блока
+
+        // Создаем блок из символов и считаем его вероятность
+        for ( size_t i = 0; i < COMB_LENGTH ; ++i )
+        {
+            comb += charset[ indices[i] ].first;   // Формируем строку блока
+            prob *= charset[ indices[i] ].second;  // Умножаем вероятности символов
+        }
+
+        // Добавляем блок в список
+        combset.push_back( { comb , prob } );
+    } 
+    
+    // [&]: Захват переменных. & означает, что переменные из внешней области видимости будут захвачены по ссылке.
+    // (): Пустые круглые скобки означают, что функция не принимает параметров.
+    // { ... }: Тело лямбда-функции.
+    // () после тела функции: Немедленный вызов лямбда-функции.
+    while ([&]()
+    {
+        // Генерация всех комбинаций с помощью счетчика
+        for ( int i = (int)COMB_LENGTH - 1 ; i >= 0 ; --i )
+        {
+            if ( ++indices[i] < n ) // Увеличиваем текущий индекс
+            {
+                return true;
+            }
+
+            indices[i] = 0;  // Сбрасываем индекс, если достигнут предел
+        }
+
+        return false;  // Все комбинации сгенерированы
+    }());
+}
+
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
     const std::vector< std::pair< std::string , float > > charset {
-        { "z1" , 0.26F },
-        { "z2" , 0.23F },
-        { "z3" , 0.16F },
-        { "z4" , 0.11F },
-        { "z5" , 0.09F },
-        { "z6" , 0.08F },
-        { "z7" , 0.05F },
-        { "z8" , 0.02F }
+        { "a" , 0.7F },
+        { "b" , 0.3F }
     };
 
+    const size_t COMB_LENGTH = 3; // Длина комбинации
+
+    std::vector< std::pair< std::string , float > > combset; // Ансамбль комбинаций и их вероятностей
+
+    combset.reserve( (size_t)std::powf( (float)COMB_LENGTH , (float)charset.size() ) ); // Резервирование памяти под комбинации
+
+    generate_combinations( charset , COMB_LENGTH , combset ); // Заполнение вектора комбинациями
+
+    std::sort( combset.begin() , combset.end(),
+    // Лямбда функция для сортировки по значению вероятности
+    []( std::pair< std::string , float > a , std::pair< std::string , float > b )
+    {
+        return a.second > b.second; // Сравнение вероятностей
+    } );
+
     // Вывод ансамбля букв и их вероятностей
+    std::cout << "Charset:" << std::endl;
+
     for ( auto iter = charset.cbegin() ; iter != charset.cend() ; ++iter )
     {
         std::cout << iter->first << ": " << iter->second << std::endl;
     }
 
-    HuffmanAlg huffman_alg ( &charset );
-    ShannonFanoAlg shannon_fano_alg ( &charset );
+    // Вывод комбинаций и их вероятностей
+    std::cout << "Combset:" << std::endl;
+
+    for ( auto iter = combset.cbegin() ; iter != combset.cend() ; ++iter )
+    {
+        std::cout << iter->first << ": " << iter->second << std::endl;
+    }
+
+    HuffmanAlg huffman_alg ( &combset );
+    ShannonFanoAlg shannon_fano_alg ( &combset );
 
     std::cout << "Huffman codes:" << std::endl;
 
@@ -456,12 +517,8 @@ int main(int, char**)
 
     shannon_fano_alg.output_codes();
 
-    huffman_alg.output_entropy();
-    shannon_fano_alg.output_entropy();
     huffman_alg.output_average_length();
     shannon_fano_alg.output_average_length();
-    huffman_alg.output_redundancy();
-    shannon_fano_alg.output_redundancy();
 
     return 0;
 }
