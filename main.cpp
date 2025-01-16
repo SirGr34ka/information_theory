@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-size_t COMB_LENGTH = 3;
+size_t COMB_LENGTH = 1; // Длина комбинации
 
 // Шаблоны функции
 template < typename T >
@@ -19,11 +19,9 @@ void sort_codes_by_charset( const std::vector< std::pair< std::string , float > 
 //-----------------------------------------------------------------------------------------------------------------
 // Класс ноды дерева
 template < class T >
-class TreeTop
+struct TreeTop
 {
     T data;
-
-    public:
 
     TreeTop* right;
     TreeTop* left;
@@ -100,7 +98,7 @@ class HuffmanAlg
     std::vector< std::pair< std::string , std::string > > codes;
 
     // Вектор указателей на вершину дерева, которая хранит данные вида: std::pair< буква , вероятность >
-    std::vector<TreeTop< std::pair< std::string , float > >* > tree_tops;
+    std::vector< TreeTop< std::pair< std::string , float > >* > tree_tops;
 
     float entropy;
     float average_length;
@@ -174,14 +172,16 @@ class HuffmanAlg
         redundancy = 0;
 
         charset_ptr = charset_ptr_;
-
+        
+        // Резервирование памяти под вершины дерева
         tree_tops.reserve( charset_ptr_->size() );
         
         for ( size_t i = 0 ; i < charset_ptr_->size() ; ++i )
         {
-            tree_tops.push_back( new TreeTop< std::pair< std::string , float > >( (*charset_ptr_)[i] ));
+            tree_tops.push_back( new TreeTop< std::pair< std::string , float > >( ( *charset_ptr_ )[ i ] ));
         }
 
+        // Резервирование памяти под коды
         codes.reserve( charset_ptr_->size() );
     }
 
@@ -381,13 +381,13 @@ class ShannonFanoAlg
     }
 };
 
-// Поиск буквы в charset или codes
+// Поиск буквы/комбинации в charset или codes
 template < typename T >
 int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character )
 {
     for ( size_t i = 0 ; i < charset.size() ; ++i )
     {
-        // Если буква равна искомой
+        // Если буква/комбинация равна искомой
         if ( charset[i].first == character )
         {
             return (int)i;
@@ -397,7 +397,7 @@ int find_character( const std::vector< std::pair< std::string , T > >& charset ,
     return -1;
 }
 
-// Сортировка букв в codes по расположению букв в charset
+// Сортировка букв в codes по расположению букв/комбинаций в charset
 void sort_codes_by_charset( const std::vector< std::pair< std::string , float > >* charset_ptr, // Указатель на charset
                             std::vector< std::pair< std::string , std::string > >& codes )      // Ссылка на codes
 {
@@ -406,7 +406,7 @@ void sort_codes_by_charset( const std::vector< std::pair< std::string , float > 
 
     for ( size_t i = 0 ; i < charset_ptr->size() ; ++i )
     {
-        // Поиск буквы в codes ( < Тип шаблона >, соответствено float для charset и std::string для codes  )
+        // Поиск буквы/комбинации в codes ( < Тип шаблона >, соответствено float для charset и std::string для codes  )
         index = find_character< std::string >( codes , (*charset_ptr)[i].first );
 
         // Если буква не найдена
@@ -427,13 +427,15 @@ void sort_codes_by_charset( const std::vector< std::pair< std::string , float > 
     return;
 }
 
+// Генерация ансамбля всевозможных комбинаций и их вероятностей из ансамбля букв с их вероятностями
 void generate_combinations( const std::vector< std::pair< std::string , float > >& charset,
                      std::vector< std::pair< std::string , float > >& combset )
 {
-    size_t n = charset.size();  // Количество символов
+    size_t size = charset.size();  // Количество символов
     std::vector< size_t > indices( COMB_LENGTH , 0 );  // Индексы для генерации комбинаций
 
-    do {
+    do
+    {
         std::string comb = "";  // Блок символов
         float prob = 1.0F;  // Вероятность блока
 
@@ -455,9 +457,9 @@ void generate_combinations( const std::vector< std::pair< std::string , float > 
     while ([&]()
     {
         // Генерация всех комбинаций с помощью счетчика
-        for ( int i = (int)COMB_LENGTH - 1 ; i >= 0 ; --i )
+        for ( int i = ( ( int )COMB_LENGTH - 1 ) ; i >= 0 ; --i )
         {
-            if ( ++indices[i] < n ) // Увеличиваем текущий индекс
+            if ( ++indices[i] < size ) // Увеличиваем текущий индекс
             {
                 return true;
             }
@@ -561,6 +563,7 @@ int main(int, char**)
 
     file.close();
 
+    // Поиск кодов для каждой из длин комбинаций (длина от 1 до 5)
     for ( COMB_LENGTH = 1 ; COMB_LENGTH <= 5 ; ++COMB_LENGTH )
     {
         std::vector< std::pair< std::string , float > > combset; // Ансамбль комбинаций и их вероятностей
