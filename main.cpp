@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 
 #include <vector>
 #include <string>
@@ -6,6 +7,8 @@
 
 #include <algorithm>
 #include <cmath>
+
+size_t COMB_LENGTH = 3;
 
 // Шаблоны функции
 template < typename T >
@@ -195,13 +198,12 @@ class HuffmanAlg
         sort_codes_by_charset( charset_ptr , codes );
         
         // Вывод кодов
-        for ( auto iter = codes.cbegin() ; iter != codes.cend() ; ++iter )
+        for ( auto iter = codes.cbegin() ; iter != ( codes.cbegin() + 2 ) ; ++iter )
         {
             std::cout << iter->first << ": " << iter->second << std::endl;
         };
     }
 
-    // Вывод энтропии
     // Вывод энтропии
     void output_entropy()
     {
@@ -338,7 +340,7 @@ class ShannonFanoAlg
         sort_codes_by_charset( charset_ptr , codes );
         
         // Вывод кодов
-        for ( auto iter = codes.cbegin() ; iter != codes.cend() ; ++iter )
+        for ( auto iter = codes.cbegin() ; iter != ( codes.cbegin() + 2 ) ; ++iter )
         {
             std::cout << iter->first << ": " << iter->second << std::endl;
         }
@@ -425,7 +427,7 @@ void sort_codes_by_charset( const std::vector< std::pair< std::string , float > 
     return;
 }
 
-void generate_combinations( const std::vector< std::pair< std::string , float > >& charset , const size_t COMB_LENGTH,
+void generate_combinations( const std::vector< std::pair< std::string , float > >& charset,
                      std::vector< std::pair< std::string , float > >& combset )
 {
     size_t n = charset.size();  // Количество символов
@@ -467,58 +469,133 @@ void generate_combinations( const std::vector< std::pair< std::string , float > 
     }());
 }
 
+// Подсчет количества встреч подстроки substr в строке str
+size_t count( const std::string& str , const std::string& substr )
+{
+    const size_t SUBSTR_SIZE = substr.size();
+    const size_t STR_SIZE = str.size();
+    
+    size_t res = 0;
+ 
+    for ( size_t i = 0 ; i <= ( STR_SIZE - SUBSTR_SIZE ) ; i += COMB_LENGTH )
+    {
+        size_t j = 0;
+
+        for ( ; j < SUBSTR_SIZE ; ++j )
+        {
+            if ( str[ i + j ] != substr[ j ] )
+            {
+                break;
+            }
+        }
+            
+        if ( j == SUBSTR_SIZE )
+        {
+            ++res;
+        }
+    }
+
+    return res;
+}
+
+void get_combinations( std::string& text , std::vector< std::pair< std::string , float > >& combset )
+{
+    // Добавляем к тексту пробелы, чтобы его длина была кратна длине комбинации
+    while ( text.size() % COMB_LENGTH != 0 )
+    {
+        text += ' ';
+    }
+
+    const size_t TEXT_SIZE = text.size();
+    const size_t COMB_AMOUNT = TEXT_SIZE / COMB_LENGTH; // Количество комбинаций в тексте
+
+    // Резервирование памяти под максимально возможное количество уникальных комбинаций длины COMB_LENGTH
+    combset.reserve( COMB_AMOUNT + 1 );
+
+    float prob;
+    std::pair< std::string , float > element;
+
+    float sum = 0.0F;
+
+    // Нахождение комбинаций и их частот, их добавление в ансамбль
+    for ( size_t i = 0 ; i < TEXT_SIZE ; i += COMB_LENGTH )
+    {
+        const std::string combination = text.substr( i , COMB_LENGTH );
+        size_t comb_count = count( text , combination );
+
+        prob = ( float )comb_count / ( float )( COMB_AMOUNT ); // Подсчет вероятности
+        element = { combination , prob };
+
+        // Если ансамбле combset нету найденной комбинации, то добавляем ее в конец ансамбля
+        if ( ( std::find( combset.begin() , combset.end() , element ) ) == combset.end() )
+        {
+            combset.push_back( element );
+            sum += prob;
+        }
+    }
+
+    return;
+}
+
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
-    const std::vector< std::pair< std::string , float > > charset {
-        { "a" , 0.7F },
-        { "b" , 0.3F }
-    };
+    // Чтение текста из файла
+    const std::string FILE_PATH = "../../../text.txt";
 
-    const size_t COMB_LENGTH = 3; // Длина комбинации
+    std::ifstream file;
 
-    std::vector< std::pair< std::string , float > > combset; // Ансамбль комбинаций и их вероятностей
+    file.open( FILE_PATH );
 
-    combset.reserve( (size_t)std::powf( (float)COMB_LENGTH , (float)charset.size() ) ); // Резервирование памяти под комбинации
+    std::string text;
 
-    generate_combinations( charset , COMB_LENGTH , combset ); // Заполнение вектора комбинациями
-
-    std::sort( combset.begin() , combset.end(),
-    // Лямбда функция для сортировки по значению вероятности
-    []( std::pair< std::string , float > a , std::pair< std::string , float > b )
+    if ( file.is_open() )
     {
-        return a.second > b.second; // Сравнение вероятностей
-    } );
+        std::string line;
 
-    // Вывод ансамбля букв и их вероятностей
-    std::cout << "Charset:" << std::endl;
-
-    for ( auto iter = charset.cbegin() ; iter != charset.cend() ; ++iter )
-    {
-        std::cout << iter->first << ": " << iter->second << std::endl;
+        if ( std::getline( file , line ) )
+        {
+            text = line;
+        }
     }
 
-    // Вывод комбинаций и их вероятностей
-    std::cout << "Combset:" << std::endl;
+    file.close();
 
-    for ( auto iter = combset.cbegin() ; iter != combset.cend() ; ++iter )
+    for ( COMB_LENGTH = 1 ; COMB_LENGTH <= 5 ; ++COMB_LENGTH )
     {
-        std::cout << iter->first << ": " << iter->second << std::endl;
+        std::vector< std::pair< std::string , float > > combset; // Ансамбль комбинаций и их вероятностей
+
+        get_combinations( text , combset );
+
+        std::sort( combset.begin() , combset.end(),
+        // Лямбда функция для сортировки по значению вероятности
+        []( std::pair< std::string , float > a , std::pair< std::string , float > b )
+        {
+            return a.second > b.second; // Сравнение вероятностей
+        } );
+
+        HuffmanAlg huffman_alg ( &combset );
+        ShannonFanoAlg shannon_fano_alg ( &combset );
+
+        std::cout << "Combination length: " << COMB_LENGTH << std::endl;
+
+        std::cout << "Huffman codes: " << std::endl;
+        huffman_alg.output_codes();
+
+        std::cout << "Shannon-Fano codes" << std::endl;
+        shannon_fano_alg.output_codes();
+
+        huffman_alg.output_entropy();
+        shannon_fano_alg.output_entropy();
+
+        huffman_alg.output_average_length();
+        shannon_fano_alg.output_average_length();
+
+        huffman_alg.output_redundancy();
+        shannon_fano_alg.output_redundancy();
+
+        std::cout << std::endl;
     }
-
-    HuffmanAlg huffman_alg ( &combset );
-    ShannonFanoAlg shannon_fano_alg ( &combset );
-
-    std::cout << "Huffman codes:" << std::endl;
-
-    huffman_alg.output_codes();
-
-    std::cout << "Shannon-Fano codes:" << std::endl;
-
-    shannon_fano_alg.output_codes();
-
-    huffman_alg.output_average_length();
-    shannon_fano_alg.output_average_length();
 
     return 0;
 }
