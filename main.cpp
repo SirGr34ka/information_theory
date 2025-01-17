@@ -542,62 +542,24 @@ void get_combinations( std::string& text , std::vector< std::pair< std::string ,
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
-    // Чтение текста из файла
-    const std::string FILE_PATH = "../../../text.txt";
+    std::cout << "What you want to do?\n0 - Archive\n1 - Extract" << std::endl;
 
-    std::ifstream file;
+    bool status;
+    std::string file_path;
 
-    file.open( FILE_PATH );
+    std::cin >> status;
 
-    std::string text;
-
-    if ( file.is_open() )
+    if ( !status )
     {
-        std::string line;
+        std::cout << "What algorithm you want to use?\n0 - Huffman algorithm\n1 - Shennon-Fano algorithm" << std::endl;
 
-        if ( std::getline( file , line ) )
-        {
-            text = line;
-        }
+        std::cin >> status;
     }
-
-    file.close();
-
-    // Поиск кодов для каждой из длин комбинаций (длина от 1 до 5)
-    for ( COMB_LENGTH = 1 ; COMB_LENGTH <= 5 ; ++COMB_LENGTH )
+    else
     {
-        std::vector< std::pair< std::string , float > > combset; // Ансамбль комбинаций и их вероятностей
+        std::cout << "Input path to file: ";
 
-        get_combinations( text , combset );
-
-        std::sort( combset.begin() , combset.end(),
-        // Лямбда функция для сортировки по значению вероятности
-        []( std::pair< std::string , float > a , std::pair< std::string , float > b )
-        {
-            return a.second > b.second; // Сравнение вероятностей
-        } );
-
-        HuffmanAlg huffman_alg ( &combset );
-        ShannonFanoAlg shannon_fano_alg ( &combset );
-
-        std::cout << "Combination length: " << COMB_LENGTH << std::endl;
-
-        std::cout << "Huffman codes: " << std::endl;
-        huffman_alg.output_codes();
-
-        std::cout << "Shannon-Fano codes" << std::endl;
-        shannon_fano_alg.output_codes();
-
-        huffman_alg.output_entropy();
-        shannon_fano_alg.output_entropy();
-
-        huffman_alg.output_average_length();
-        shannon_fano_alg.output_average_length();
-
-        huffman_alg.output_redundancy();
-        shannon_fano_alg.output_redundancy();
-
-        std::cout << std::endl;
+        std::cin >> file_path;
     }
 
     return 0;
