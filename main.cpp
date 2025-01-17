@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-size_t COMB_LENGTH = 1; // Длина комбинации
+size_t COMB_LENGTH = 3; // Длина комбинации
 
 // Шаблоны функции
 template < typename T >
@@ -196,12 +196,6 @@ class HuffmanAlg
 
         // Сортировка codes
         sort_codes_by_charset( charset_ptr , codes );
-        
-        // Вывод кодов
-        for ( auto iter = codes.cbegin() ; iter != ( codes.cbegin() + 2 ) ; ++iter )
-        {
-            std::cout << iter->first << ": " << iter->second << std::endl;
-        };
     }
 
     // Вывод энтропии
@@ -542,16 +536,14 @@ void get_combinations( std::string& text , std::vector< std::pair< std::string ,
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
-    std::string file_path;
+    std::string file_path = "../../../text.txt";
     
     std::cout << "Input path to file:" << std::endl;
-
-    std::cin >> file_path;
-
-    std::cout << "What you want to do?\n0 - Archive\n1 - Extract" << std::endl;
+    std::cout << file_path << std::endl;
 
     bool status;
 
+    std::cout << "What you want to do?\n0 - Archive\n1 - Extract" << std::endl;
     std::cin >> status;
 
     if ( !status )
@@ -559,6 +551,37 @@ int main(int, char**)
         std::cout << "What algorithm you want to use?\n0 - Huffman algorithm\n1 - Shennon-Fano algorithm" << std::endl;
 
         std::cin >> status;
+
+        if ( !status )
+        {
+            std::string text;
+
+            std::ifstream file;
+
+            file.open( file_path , std::ios::binary );
+
+            if ( file.is_open() )
+            {
+                std::string line;
+
+                char delimiter = 0x3;
+
+                if ( std::getline( file , line , delimiter ) )
+                {
+                    text = line;
+                }
+            }
+
+            file.close();
+
+            std::vector< std::pair< std::string , float > > combset;
+
+            get_combinations( text , combset );
+
+            HuffmanAlg huffman_alg( &combset );
+
+            huffman_alg.output_codes();
+        }
     }
 
     return 0;
