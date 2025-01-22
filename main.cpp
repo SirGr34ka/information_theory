@@ -342,6 +342,11 @@ class ShannonFanoAlg
         return;
     }
 
+    void archive(  )
+    {
+        
+    }
+
     // Вывод энтропии
     void output_entropy()
     {
@@ -536,6 +541,10 @@ void get_combinations( std::string& text , std::vector< std::pair< std::string ,
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
+    // std::string text = "abcdef";
+
+    // std::string substr = text.substr( 8 , 4 );
+
     std::string file_path = "../../../text.txt";
     
     std::cout << "Input path to file:" << std::endl;
