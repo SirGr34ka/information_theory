@@ -7,12 +7,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <bitset>
 
-size_t COMB_LENGTH = 3; // Длина комбинации
+size_t COMB_LENGTH = 5; // Длина комбинации
 
 // Шаблоны функции
 template < typename T >
-int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character );
+int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string& character );
+
+int find_code( const std::vector< std::pair< std::string , std::string > >& codes , const std::string& code );
 
 void sort_codes_by_charset( const std::vector< std::pair< std::string , float > >* charset_ptr,
                             std::vector< std::pair< std::string , std::string > >& codes );
@@ -25,14 +28,16 @@ struct TreeTop
 
     TreeTop* right;
     TreeTop* left;
+    TreeTop* previous;
 
     // Конструктор класса
     TreeTop( const T& _data )
     {
         data = _data;
 
-        left = NULL;
-        right = NULL;
+        left = nullptr;
+        right = nullptr;
+        previous = nullptr;
     }
 
     // Гетер данных из вершины
@@ -58,34 +63,41 @@ struct TreeTop
     }
 
     // Префиксный обход дерева
-    /*
-    void preorder_output()
+    // Для метода archive в HuffmanAlg
+    void preorder_output(std::string& combs , // Последовательность комбинаций
+                                std::string& tree )  // Дерево в побитовом представлении
     {
-        std::cout << this->get_data() << " ";
-
-        if ( left != NULL )
+        if ( left != nullptr )
         {
-            left->preorder_output();
+            tree += "1";
+            left->preorder_output( combs , tree );
+            tree += "0";
         }
 
-        if ( right != NULL )
+        if ( right != nullptr )
         {
-            right->preorder_output();
+            tree += "1";
+            right->preorder_output( combs , tree );
+            tree += "0";
+        }
+
+        if ( data.first != "" )
+        {
+            combs += data.first;
         }
 
         return;
     }
-    */
 
     // Деструктор класса
     ~TreeTop()
     {
-        if ( right != NULL )
+        if ( right != nullptr )
         {
             delete right;
         }
         
-        if ( left != NULL )
+        if ( left != nullptr )
         {
             delete left;
         }
@@ -94,7 +106,7 @@ struct TreeTop
 //---------------------------------------------------------------------------------------------------------
 class HuffmanAlg
 {
-    const std::vector< std::pair< std::string , float > >* charset_ptr;
+    std::vector< std::pair< std::string , float > >* charset_ptr;
     std::vector< std::pair< std::string , std::string > > codes;
 
     // Вектор указателей на вершину дерева, которая хранит данные вида: std::pair< буква , вероятность >
@@ -165,7 +177,7 @@ class HuffmanAlg
     public:
 
     // Конструктор класса, принимающий указатель на ансамбль букв и их вероятностей
-    HuffmanAlg( const std::vector< std::pair< std::string , float > >* charset_ptr_ )
+    HuffmanAlg( std::vector< std::pair< std::string , float > >* charset_ptr_ )
     {
         entropy = 0;
         average_length = 0;
@@ -183,6 +195,136 @@ class HuffmanAlg
 
         // Резервирование памяти под коды
         codes.reserve( charset_ptr_->size() );
+    }
+
+    // Функция получения закодированного сообщения
+    std::string archive( std::string& text )
+    {
+        std::string result = "";
+
+        // Документация: https://en.cppreference.com/w/cpp/utility/bitset
+        std::bitset< 4 > binSIZE_BLOCK( COMB_LENGTH );    // Перевод длины комбинации в битовое представление
+        std::bitset< 16 > binBLOCKS_SIZE( codes.size() ); // Перевод количества ансамблей в битовое представление
+        
+        result += binSIZE_BLOCK.to_string() + binBLOCKS_SIZE.to_string();
+
+        // Получение последовательности комбинаций и дерева в двоичном представлении
+        std::string combs = "";
+        std::string tree = "";
+
+        tree_tops[ 0 ]->preorder_output( combs , tree );
+
+        for ( auto iter = combs.begin() ; iter != combs.end() ; ++iter )
+        {
+            result += std::bitset<8>( *iter ).to_string();
+        }
+
+        result += tree + '0';
+
+        // Кодирование текста
+        for ( size_t i = 0 ; i < text.size() ; i += COMB_LENGTH )
+        {
+            std::string block = text.substr( i , COMB_LENGTH );
+            result += codes[ find_character( codes , block ) ].second;
+        }
+
+        std::bitset<32> binSIZE( result.size() );       // Перевод размера закодированного текста в битовое представление 
+
+        result = binSIZE.to_string() + result;
+
+        if (result.size() % 8 != 0)
+        {
+            for (auto i = result.size() % 8; i < 8; i++)
+            {
+                result += "0";
+            }
+        }
+        
+        return result;
+    }
+
+    std::string extract( std::string& bin )
+    {
+        std::string result = "";
+
+        const size_t SIZE = std::bitset< 32 >( bin.substr( 0 , 32 ) ).to_ullong();
+        const size_t SIZE_BLOCK = std::bitset< 4 >( bin.substr( 32 , 4 ) ).to_ullong();
+        const size_t BLOCKS_SIZE = std::bitset< 16 >( bin.substr( 36 , 16 ) ).to_ullong();
+
+        charset_ptr->pop_back();
+        charset_ptr->reserve( BLOCKS_SIZE );
+
+        for ( size_t i = 0 ; i < BLOCKS_SIZE ; ++i )
+        {
+            std::string block = "";
+
+            for ( size_t j = 0 ; j < SIZE_BLOCK ; ++j )
+            {
+                block += ( char )( std::bitset< 8 >( bin.substr( 52 + ( j * 8 ) + ( i * SIZE_BLOCK * 8 ) , 8 ) ).to_ulong() );
+            }
+
+            charset_ptr->push_back( { block , 0 } );
+        }
+
+        TreeTop< std::pair< std::string , float > >* current_top = tree_tops[ 0 ];
+
+        size_t i = 0ull;
+        int counter = 0;
+
+        for ( size_t j = 0ull ; counter >= 0 ; ++i )
+        {
+            bool action = ( bool )( std::bitset< 1 >( bin[ 52 + BLOCKS_SIZE * SIZE_BLOCK * 8 + i ] ).to_ulong() );
+
+            if ( action )
+            {
+                ++counter;
+
+                TreeTop< std::pair< std::string , float > >* top = new TreeTop< std::pair< std::string , float > >( { "" , 0 } );
+
+                if ( current_top->left == nullptr )
+                {
+                    current_top->push_left( top );
+                }
+                else
+                {
+                    current_top->push_right( top );
+                }
+
+                top->previous = current_top;
+                current_top = top;
+            }
+            else
+            {
+                --counter;
+
+                if ( current_top->left == nullptr && current_top->right == nullptr )
+                {
+                    current_top->data = ( *charset_ptr )[ j++ ];
+                }
+
+                current_top = current_top->previous;
+            }
+        }
+
+        get_codes( tree_tops[ 0 ] , "" );
+
+        std::string code = "";
+
+        for ( size_t j = 52 + BLOCKS_SIZE * SIZE_BLOCK * 8 + i ; j < ( SIZE + 32 ) ; ++j )
+        {
+            code += bin[ j ];
+
+            const int index = find_code( codes , code );
+
+            if ( index >= 0 )
+            {
+                result += codes[ index ].first;
+
+                code = "";
+            }
+        }
+
+        return result;
     }
 
     // Строит коды для ансамбля вероятностей и выводит их
@@ -382,12 +524,27 @@ class ShannonFanoAlg
 
 // Поиск буквы/комбинации в charset или codes
 template < typename T >
-int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string character )
+int find_character( const std::vector< std::pair< std::string , T > >& charset , const std::string& character )
 {
     for ( size_t i = 0 ; i < charset.size() ; ++i )
     {
         // Если буква/комбинация равна искомой
         if ( charset[i].first == character )
+        {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+// Поиск кода в codes
+int find_code( const std::vector< std::pair< std::string , std::string > >& codes , const std::string& code )
+{
+    for ( size_t i = 0 ; i < codes.size() ; ++i )
+    {
+        // Если код равен искомому
+        if ( codes[i].second == code )
         {
             return (int)i;
         }
@@ -538,6 +695,40 @@ void get_combinations( std::string& text , std::vector< std::pair< std::string ,
     return;
 }
 
+void writeBinaryToFile( std::string binaryString , const std::string& fileName )
+{
+    std::ofstream outFile( fileName , std::ios::binary );
+
+    size_t len = binaryString.length();
+
+    for ( size_t i = 0 ; i < len ; i += 8ull )
+    {
+        std::bitset< 8 > bits( binaryString.substr( i , 8 ) );
+        unsigned char byte = static_cast< unsigned char >( bits.to_ulong() );
+        outFile.write( reinterpret_cast< const char* >( &byte ) , sizeof( byte ) );
+    }
+
+    outFile.close();
+}
+
+std::string readBinaryStringFromFile( const std::string &fileName )
+{
+    std::ifstream inFile( fileName , std::ios::binary );
+    std::string stringBin;
+
+    unsigned char byte;
+
+    while ( inFile.read( reinterpret_cast< char* >( &byte ) , sizeof( byte ) ) )
+    {
+        std::bitset< 8 > bits( byte );
+        stringBin += bits.to_string();
+    }
+
+    inFile.close();
+
+    return stringBin;
+}
+
 //---------------------------------------------------------------------------------------------------------
 int main(int, char**)
 {
@@ -590,7 +781,32 @@ int main(int, char**)
             HuffmanAlg huffman_alg( &combset );
 
             huffman_alg.output_codes();
+
+            std::string archive = huffman_alg.archive( text );
+
+            writeBinaryToFile( archive , "../../../text_archived.bin" );
         }
+    }
+    else
+    {
+        std::string archive = readBinaryStringFromFile( "../../../text_archived.bin" );
+
+        std::vector< std::pair< std::string , float > > combset{ { "" , 0 } };
+
+        HuffmanAlg huffman_alg( &combset );
+
+        std::string text = huffman_alg.extract( archive );
+
+        std::ofstream file;
+
+        file.open( "../../../text_new.txt" , std::ios::binary );
+
+        if ( file.is_open() )
+        {
+            file << text;
+        }
+
+        file.close();
     }
 
     return 0;
