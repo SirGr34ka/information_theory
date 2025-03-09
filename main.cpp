@@ -9,7 +9,7 @@
 #include <cmath>
 #include <bitset>
 
-size_t COMB_LENGTH = 5; // Длина комбинации
+size_t COMB_LENGTH = 3; // Длина комбинации
 
 // Шаблоны функции
 template < typename T >
@@ -225,12 +225,13 @@ class HuffmanAlg
         for ( size_t i = 0 ; i < text.size() ; i += COMB_LENGTH )
         {
             std::string block = text.substr( i , COMB_LENGTH );
+
             result += codes[ find_character( codes , block ) ].second;
         }
 
         std::bitset<32> binSIZE( result.size() );       // Перевод размера закодированного текста в битовое представление 
 
-        result = binSIZE.to_string() + result;
+        result = '0' + binSIZE.to_string() + result;
 
         if (result.size() % 8 != 0)
         {
@@ -247,13 +248,14 @@ class HuffmanAlg
     {
         std::string result = "";
 
-        const size_t SIZE = std::bitset< 32 >( bin.substr( 0 , 32 ) ).to_ullong();
-        const size_t SIZE_BLOCK = std::bitset< 4 >( bin.substr( 32 , 4 ) ).to_ullong();
-        const size_t BLOCKS_SIZE = std::bitset< 16 >( bin.substr( 36 , 16 ) ).to_ullong();
+        const size_t SIZE = std::bitset< 32 >( bin.substr( 0 , 32 ) ).to_ullong();          // Количество битов в закодированном сообщении
+        const size_t SIZE_BLOCK = std::bitset< 4 >( bin.substr( 32 , 4 ) ).to_ullong();     // Длина комбинации
+        const size_t BLOCKS_SIZE = std::bitset< 16 >( bin.substr( 36 , 16 ) ).to_ullong();  // Количество блоков
 
         charset_ptr->pop_back();
         charset_ptr->reserve( BLOCKS_SIZE );
 
+        // Считывание блоков
         for ( size_t i = 0 ; i < BLOCKS_SIZE ; ++i )
         {
             std::string block = "";
@@ -266,6 +268,7 @@ class HuffmanAlg
             charset_ptr->push_back( { block , 0 } );
         }
 
+        // Построение дерева
         TreeTop< std::pair< std::string , float > >* current_top = tree_tops[ 0 ];
 
         size_t i = 0ull;
@@ -306,8 +309,10 @@ class HuffmanAlg
             }
         }
 
+        // Получение кодов из построенного дерева
         get_codes( tree_tops[ 0 ] , "" );
 
+        // Расшифровка сообщения
         std::string code = "";
 
         for ( size_t j = 52 + BLOCKS_SIZE * SIZE_BLOCK * 8 + i ; j < ( SIZE + 32 ) ; ++j )
@@ -381,7 +386,7 @@ class HuffmanAlg
 //---------------------------------------------------------------------------------------------------------
 class ShannonFanoAlg
 {
-    const std::vector< std::pair< std::string , float > >* charset_ptr;
+    std::vector< std::pair< std::string , float > >* charset_ptr;
     std::vector< std::pair< std::string , std::string > > codes;
 
     float entropy;
@@ -450,7 +455,7 @@ class ShannonFanoAlg
     public:
 
     // Конструктор класса, принимающий указатель на ансамбль букв и их вероятностей
-    ShannonFanoAlg( const std::vector< std::pair< std::string , float > >* charset_ptr_ )
+    ShannonFanoAlg( std::vector< std::pair< std::string , float > >* charset_ptr_ )
     {
         entropy = 0;
         average_length = 0;
@@ -474,19 +479,116 @@ class ShannonFanoAlg
 
         // Сортировка codes
         sort_codes_by_charset( charset_ptr , codes );
-        
-        // Вывод кодов
-        for ( auto iter = codes.cbegin() ; iter != ( codes.cbegin() + 2 ) ; ++iter )
-        {
-            std::cout << iter->first << ": " << iter->second << std::endl;
-        }
 
         return;
     }
 
-    void archive(  )
+    std::string archive( std::string& text )
     {
+        std::string result = "";
+
+        // Документация: https://en.cppreference.com/w/cpp/utility/bitset
+        std::bitset< 4 > binSIZE_BLOCK( COMB_LENGTH );    // Перевод длины комбинации в битовое представление
+        std::bitset< 16 > binBLOCKS_SIZE( codes.size() ); // Перевод количества ансамблей в битовое представление
         
+        result += binSIZE_BLOCK.to_string() + binBLOCKS_SIZE.to_string();
+
+        // Запись комбинаций и их кодов двоичном представлении
+        for ( const auto& pair : codes )
+        {
+            std::string block = pair.first;
+            std::string code = pair.second;
+
+            size_t size_code = code.size();
+
+            std::bitset< 8 > binsize_code( size_code );
+
+            for ( char c : block )
+            {
+                result += std::bitset< 8 >( c ).to_string();
+            }
+
+            result += binsize_code.to_string();
+            result += code;
+        }
+
+        // Кодирование текста
+        for ( size_t i = 0 ; i < text.size() ; i += COMB_LENGTH )
+        {
+            std::string block = text.substr( i , COMB_LENGTH );
+
+            result += codes[ find_character( codes , block ) ].second;
+        }
+
+        std::bitset<32> binSIZE( result.size() );       // Перевод размера закодированного текста в битовое представление 
+
+        result = '1' + binSIZE.to_string() + result;
+
+        if (result.size() % 8 != 0)
+        {
+            for (auto i = result.size() % 8; i < 8; i++)
+            {
+                result += "0";
+            }
+        }
+        
+        return result;
+    }
+
+    std::string extract( std::string& bin )
+    {
+        std::string result = "";
+
+        const size_t SIZE = std::bitset< 32 >( bin.substr( 0 , 32 ) ).to_ullong();          // Количество битов в закодированном сообщении
+        const size_t SIZE_BLOCK = std::bitset< 4 >( bin.substr( 32 , 4 ) ).to_ullong();     // Длина комбинации
+        const size_t BLOCKS_SIZE = std::bitset< 16 >( bin.substr( 36 , 16 ) ).to_ullong();  // Количество блоков
+
+        charset_ptr->pop_back();
+        charset_ptr->reserve( BLOCKS_SIZE );
+
+        // Считывание блоков и их кодов
+        size_t code_lengths = 0;
+
+        for ( size_t i = 0 ; i < BLOCKS_SIZE ; ++i )
+        {
+            std::string block = "";
+            std::string code = "";
+
+            for ( size_t j = 0 ; j < SIZE_BLOCK ; ++j )
+            {
+                block += ( char )( std::bitset< 8 >( bin.substr( 52 + i * 8 * SIZE_BLOCK + 8 * i + code_lengths + j * 8 , 8 ) ).to_ulong() );
+            }
+
+            size_t code_size = std::bitset< 8 >( bin.substr( 52 + ( i + 1 ) * 8 * SIZE_BLOCK + 8 * i + code_lengths , 8 ) ).to_ullong();
+
+            for ( size_t j = 0 ; j < code_size ; ++j )
+            {
+                code += bin[ 52 + ( i + 1 ) * 8 * SIZE_BLOCK + 8 * ( i + 1 ) + code_lengths + j ];
+            }
+
+            code_lengths += code_size;
+
+            codes.push_back( { block , code } );
+        }
+        
+        // Расшифровка сообщения
+        std::string code = "";
+
+        for ( size_t j = 52 + BLOCKS_SIZE * SIZE_BLOCK * 8 + 8 * BLOCKS_SIZE + code_lengths ; j < ( SIZE + 32 ) ; ++j )
+        {
+            code += bin[ j ];
+
+            const int index = find_code( codes , code );
+
+            if ( index >= 0 )
+            {
+                result += codes[ index ].first;
+
+                code = "";
+            }
+        }
+
+        return result;
     }
 
     // Вывод энтропии
@@ -752,37 +854,100 @@ int main(int, char**)
 
         std::cin >> status;
 
-        if ( !status )
+        std::string text;
+
+        // Открытие и считывание файла
+        std::ifstream file;
+
+        file.open( file_path , std::ios::binary );
+
+        if ( file.is_open() )
         {
-            std::string text;
+            std::string line;
 
-            std::ifstream file;
+            char delimiter = 0x3;
 
-            file.open( file_path , std::ios::binary );
-
-            if ( file.is_open() )
+            if ( std::getline( file , line , delimiter ) )
             {
-                std::string line;
+                text = line;
+            }
+        }
 
-                char delimiter = 0x3;
+        file.close();
 
-                if ( std::getline( file , line , delimiter ) )
-                {
-                    text = line;
-                }
+        std::vector< std::pair< std::string , float > > combset;
+
+        // Поиск наилучшей длины
+        COMB_LENGTH = 1;
+
+        std::string text_temp = text;
+
+        get_combinations( text_temp , combset );
+
+        float entropy{ 0 }, min_entropy;
+        size_t best_comb_length = 1;
+
+        for ( size_t i = 0 ; i < combset.size() ; ++i )
+        {
+            entropy += combset[i].second * log2f( combset[i].second );
+        }
+
+        entropy = -entropy;
+
+        min_entropy = entropy;
+
+        for ( COMB_LENGTH = 2 ; COMB_LENGTH <= 5 ; ++COMB_LENGTH )
+        {
+            combset.clear();
+            combset.shrink_to_fit();
+            text_temp = text;
+
+            get_combinations( text_temp , combset );
+
+            entropy = 0;
+
+            for ( size_t i = 0 ; i < combset.size() ; ++i )
+            {
+                entropy += combset[i].second * log2f( combset[i].second );
             }
 
-            file.close();
+            entropy = -entropy;
 
-            std::vector< std::pair< std::string , float > > combset;
+            if ( entropy < min_entropy )
+            {
+                min_entropy = entropy;
+                best_comb_length = COMB_LENGTH;
+            }
+        }
 
-            get_combinations( text , combset );
+        COMB_LENGTH = best_comb_length;
 
+        combset.clear();
+        combset.shrink_to_fit();
+
+        get_combinations( text , combset );
+
+        if ( !status )
+        {
+            // Получение кодов
             HuffmanAlg huffman_alg( &combset );
 
             huffman_alg.output_codes();
 
+            // Архивация текста
             std::string archive = huffman_alg.archive( text );
+
+            writeBinaryToFile( archive , "../../../text_archived.bin" );
+        }
+        else
+        {
+            // Получение кодов
+            ShannonFanoAlg shannon_fano_alg( &combset );
+
+            shannon_fano_alg.output_codes();
+
+            // Архивация текста
+            std::string archive = shannon_fano_alg.archive( text );
 
             writeBinaryToFile( archive , "../../../text_archived.bin" );
         }
@@ -793,9 +958,20 @@ int main(int, char**)
 
         std::vector< std::pair< std::string , float > > combset{ { "" , 0 } };
 
-        HuffmanAlg huffman_alg( &combset );
+        std::string text;
 
-        std::string text = huffman_alg.extract( archive );
+        if ( archive[ 0 ] == '0' )
+        {
+            HuffmanAlg huffman_alg( &combset );
+
+            text = huffman_alg.extract( archive.substr( 1 , archive.size() - 1 ) );
+        }
+        else
+        {
+            ShannonFanoAlg shannon_fano_alg( &combset );
+
+            text = shannon_fano_alg.extract( archive.substr( 1 , archive.size() - 1 ) );
+        }
 
         std::ofstream file;
 
